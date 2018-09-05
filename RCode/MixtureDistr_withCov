@@ -20,6 +20,34 @@ x.new=seq(2,10,0.05)
 
 #JAGS model
 
+###SLL edited jags model with parameter fitted betas...but even with this fix, the poisson beta posteriors are clearly not mixing - the trace shows a bimodal posterior. 
+jags.model <- "
+model{
+  for(i in 1:N){
+    #blended model fit to observed data y 
+    y[i] ~ dpois(m[i])
+
+    #This blends the poisson and zero inflation models
+    m[i] <- mu[i]*b[i]+1E-3 #adding tiny value could ensure non-zero mean but runs without it.
+    
+    #this is the bernoulli outcome of the zero inflation
+    b[i] ~ dbern(theta[i])
+    
+    #mu=linear combination of predictors for the poisson 
+    log(mu[i]) <- beta.pois1 + beta.pois2*x[i]
+    
+    #thetalinear combination of predictors for the bernoulli 
+    logit(theta[i]) <- beta.bern1 + beta.bern2*x[i]
+
+}
+ beta.pois1 ~ dnorm(0, 1E-3)  ##you could still draw two beta.pois at a time but I did this to simplify debugging.
+ beta.bern1 ~ dnorm(0, 1E-3)
+ beta.pois2 ~ dnorm(0, 1E-3)
+ beta.bern2 ~ dnorm(0, 1E-3)
+}
+"
+
+##############Previous jags model
 jags.model <- "
 model{
   for(i in 1:N){
@@ -39,7 +67,7 @@ model{
     logit(theta[i]) <- beta.bern[1] + beta.bern[2]*x[i]
   }
   
-  #set up your priors. These are flat, uninformative priors.
+  #set up your priors. These are flat, uninformative priors.  ###Here you are drawing a new beta.pois value for each data point.
   for(i in 1:N.pred){
     beta.pois[i] ~ dnorm(0, 1E-3)
     beta.bern[i] ~ dnorm(0, 1E-3)
