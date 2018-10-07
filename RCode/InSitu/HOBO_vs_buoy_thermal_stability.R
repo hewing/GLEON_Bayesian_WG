@@ -29,23 +29,43 @@ plot1
 #calculate CV of temp at each site by day
 #doing this as a proxy measure of stability/mixing for comparison to thermal stability
 #metrics from buoy data
-co.var <- function(x) ( (sd(x)/mean(x))*100 )
+#co.var <- function(x) ( (sd(x)/mean(x))*100 )
+#we actually want sd
 
-hobo_cv = aggregate(temp_C ~ date+site, hobo, co.var)%>%
-  rename(temp_C_cv = temp_C)
+hobo_sd = aggregate(temp_C ~ date+site, hobo, sd)%>%
+  rename(temp_C_sd = temp_C)
 
 #plot CV just to see how it looks
-plot2 = ggplot(hobo_cv, aes(x = date, y = temp_C_cv, group = site, colour = site))+
+plot2 = ggplot(hobo_sd, aes(x = date, y = temp_C_sd, group = site, colour = site))+
   geom_line(size = 1)+
   theme_bw()
 plot2
 
 #zooming into one season just for funsies 
-season <- hobo_cv %>%
-  filter(year(date) == "2015")
+years = seq(2006,2016,1)
 
-plot3 = ggplot(season, aes(x = date, y = temp_C_cv, group = site, colour = site))+
+for (i in 1:length(years)){
+
+season <- hobo_sd %>%
+  filter(year(date) == years[i])
+
+plot3 = ggplot(season, aes(x = date, y = temp_C_sd, group = site, colour = site))+
   geom_line(size = 1)+
   ggtitle(year(season$date[1]))+
   theme_bw()
 plot3
+
+filename = paste0("./Figs/HOBO_Temp_SD_",years[i],".png")
+
+ggsave(plot3, filename = filename, device = "png")
+
+}
+
+hobo_sd1 <- hobo_sd %>% mutate(Year = as.factor(year(date)))
+
+plot4 = ggplot(hobo_sd1, aes(x = Year, y = temp_C_sd, fill = site))+
+  geom_boxplot()+
+  theme_bw()
+plot4
+ggsave(plot4, filename = "./Figs/HOBO_Temp_boxplot.png", device = "png",
+       width = 8, height = 4, units = "in")
